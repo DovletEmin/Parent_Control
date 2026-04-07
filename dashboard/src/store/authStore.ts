@@ -35,8 +35,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       const res = await auth.register({ email, password });
       setTokens(res.tokens.access_token, res.tokens.refresh_token);
       set({ user: res.user, loading: false });
-    } catch (e) {
-      set({ loading: false, error: 'Ошибка регистрации' });
+    } catch (e: unknown) {
+      let msg = 'Ошибка регистрации';
+      if (e && typeof e === 'object' && 'status' in e && 'body' in e) {
+        const err = e as { status: number; body: string };
+        try {
+          const data = JSON.parse(err.body);
+          if (err.status === 409) msg = 'Этот email уже зарегистрирован';
+          else if (data.detail) msg = data.detail;
+        } catch { /* keep default */ }
+      }
+      set({ loading: false, error: msg });
       throw e;
     }
   },
