@@ -55,6 +55,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.ParentControl"
+        android:usesCleartextTraffic="true"
         tools:targetApi="35">
 
         <!-- Main Activity (Pairing) -->

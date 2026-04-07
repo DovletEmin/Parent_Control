@@ -62,6 +62,6 @@ class Prefs(context: Context) {
         private const val KEY_LAST_CALL_SYNC = "last_call_sync"
         private const val KEY_LAST_SMS_SYNC = "last_sms_sync"
         private const val KEY_LAST_MEDIA_SYNC = "last_media_sync"
-        private const val DEFAULT_SERVER_URL = "http://10.0.2.2:8000"
+        private const val DEFAULT_SERVER_URL = "http://192.168.55.45:8000"
     }
 }

@@ -8,6 +8,16 @@ android {
     namespace = "com.parentcontrol.child"
     compileSdk = 35
 
+    signingConfigs {
+        create("release") {
+            // Указываем путь к файлу в корне проекта
+            storeFile = rootProject.file("release.jks")
+            storePassword = "password123"
+            keyAlias = "releaseKey"
+            keyPassword = "password123"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.parentcontrol.child"
         minSdk = 26
@@ -15,7 +25,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8000\"")
+        buildConfigField("String", "BASE_URL", "\"http://192.168.55.45:8000\"")
         buildConfigField("String", "API_PREFIX", "\"/api/v1\"")
     }
 
@@ -23,6 +33,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -30,6 +41,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
