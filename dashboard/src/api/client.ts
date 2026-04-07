@@ -198,8 +198,14 @@ export const media = {
     return request<MediaListResponse>(`/devices/${deviceId}/media?${q}`);
   },
 
-  downloadUrl: (mediaId: string) => `${BASE}/media/${mediaId}/download`,
-  thumbnailUrl: (mediaId: string) => `${BASE}/media/${mediaId}/thumbnail`,
+  downloadUrl: (mediaId: string) => {
+    const token = getAccessToken();
+    return `${BASE}/media/${mediaId}/download${token ? `?access_token=${encodeURIComponent(token)}` : ''}`;
+  },
+  thumbnailUrl: (mediaId: string) => {
+    const token = getAccessToken();
+    return `${BASE}/media/${mediaId}/thumbnail${token ? `?access_token=${encodeURIComponent(token)}` : ''}`;
+  },
 };
 
 // ── Location ─────────────────────────────────────────────────────────

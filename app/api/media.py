@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import RedirectResponse
 
-from app.core.dependencies import CurrentDevice, CurrentUser, DBSession
+from app.core.dependencies import CurrentDevice, CurrentUser, CurrentUserOrToken, DBSession
 from app.schemas.media import MediaListResponse, MediaUploadResponse
 from app.services.device_service import DeviceService
 from app.services.media_service import MediaService
@@ -52,7 +52,7 @@ async def list_media(
 )
 async def download_media(
     media_id: uuid.UUID,
-    user: CurrentUser,
+    user: CurrentUserOrToken,
     db: DBSession,
 ):
     """Parent endpoint: get a presigned download URL for a media file."""
@@ -76,7 +76,7 @@ async def download_media(
 )
 async def get_thumbnail(
     media_id: uuid.UUID,
-    user: CurrentUser,
+    user: CurrentUserOrToken,
     db: DBSession,
 ):
     """Parent endpoint: get thumbnail for a media file."""
