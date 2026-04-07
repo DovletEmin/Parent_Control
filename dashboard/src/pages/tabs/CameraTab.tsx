@@ -2,19 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useWsStore } from '../../store/wsStore';
 import { commands } from '../../api/client';
-import type { WsMessage } from '../../types';
+import type { WsMessage, DeviceResponse } from '../../types';
 import Peer from 'simple-peer';
 
-interface Ctx { deviceId: string }
+interface Ctx { deviceId: string; device: DeviceResponse }
 
 export default function CameraTab() {
-  const { deviceId } = useOutletContext<Ctx>();
+  const { deviceId, device } = useOutletContext<Ctx>();
   const videoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<Peer.Instance | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
   const send = useWsStore((s) => s.send);
+  const wsConnected = useWsStore((s) => s.connected);
   const onWs = useWsStore((s) => s.on);
 
   useEffect(() => {
@@ -45,13 +47,33 @@ export default function CameraTab() {
     return () => {
       unsubAnswer();
       unsubIce();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       stopStream();
     };
   }, [deviceId, onWs, send]);
 
   const startStream = async () => {
     setError('');
+
+    if (!device?.is_online) {
+      setError('Устройство оффлайн. Камера доступна только когда устройство в сети.');
+      return;
+    }
+
+    if (!wsConnected) {
+      setError('Нет подключения к серверу. Попробуйте обновить страницу.');
+      return;
+    }
+
     setConnecting(true);
+
+    // Timeout — if no stream in 15 seconds, abort
+    timeoutRef.current = setTimeout(() => {
+      if (!peerRef.current?.connected) {
+        setError('Устройство не ответило. Убедитесь, что приложение запущено на устройстве.');
+        stopStream();
+      }
+    }, 15_000);
 
     try {
       // Send command to device to start camera
@@ -84,6 +106,7 @@ export default function CameraTab() {
       });
 
       peer.on('stream', (stream) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -110,6 +133,10 @@ export default function CameraTab() {
   };
 
   const stopStream = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     if (peerRef.current) {
       peerRef.current.destroy();
       peerRef.current = null;
@@ -136,10 +163,10 @@ export default function CameraTab() {
         ) : (
           <button
             onClick={startStream}
-            disabled={connecting}
+            disabled={connecting || !device?.is_online}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {connecting ? 'Подключение…' : '📷 Запустить камеру'}
+            {connecting ? 'Подключение…' : !device?.is_online ? '📷 Устройство оффлайн' : '📷 Запустить камеру'}
           </button>
         )}
       </div>

@@ -26,6 +26,7 @@ export default function DeviceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cmdLoading, setCmdLoading] = useState<string | null>(null);
+  const [cmdSuccess, setCmdSuccess] = useState<string | null>(null);
   const [cmdError, setCmdError] = useState('');
 
   useEffect(() => {
@@ -44,8 +45,11 @@ export default function DeviceDetailPage() {
     if (!deviceId) return;
     setCmdLoading(type);
     setCmdError('');
+    setCmdSuccess(null);
     try {
       await commands.send(deviceId, { command_type: type });
+      setCmdSuccess(type);
+      setTimeout(() => setCmdSuccess((prev) => (prev === type ? null : prev)), 2000);
     } catch {
       setCmdError('Не удалось отправить команду');
     } finally {
@@ -96,15 +100,24 @@ export default function DeviceDetailPage() {
               onClick={() => sendCommand(cmd.type)}
               disabled={cmdLoading === cmd.type}
               title={cmd.label}
-              className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              className={`rounded-lg border px-3 py-2 text-sm transition-colors disabled:opacity-50 ${
+                cmdSuccess === cmd.type
+                  ? 'border-green-400 bg-green-50 text-green-600'
+                  : 'hover:bg-gray-50'
+              }`}
             >
-              {cmdLoading === cmd.type ? '⏳' : cmd.icon}
+              {cmdLoading === cmd.type ? '⏳' : cmdSuccess === cmd.type ? '✅' : cmd.icon}
             </button>
           ))}
         </div>
       </div>
 
       {cmdError && <p className="mb-4 text-sm text-red-600">{cmdError}</p>}
+      {cmdSuccess && (
+        <p className="mb-4 text-sm text-green-600">
+          Команда отправлена. {device?.is_online ? 'Устройство получит её сейчас.' : 'Устройство получит её при подключении.'}
+        </p>
+      )}
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border bg-white p-1">
