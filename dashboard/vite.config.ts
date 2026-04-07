@@ -1,23 +1,20 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    nodePolyfills({
+      include: ['buffer', 'events', 'util', 'stream', 'process'],
+      globals: { Buffer: true, global: true, process: true },
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // Node.js polyfills for simple-peer
-      events: 'events',
-      util: 'util',
     },
-  },
-  define: {
-    'process.env': {},
-    global: 'globalThis',
-  },
-  optimizeDeps: {
-    include: ['simple-peer'],
   },
   server: {
     port: 3000,
