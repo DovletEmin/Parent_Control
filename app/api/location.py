@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query
 
 from app.core.dependencies import CurrentDevice, CurrentUser, DBSession
 from app.schemas.common import SyncResponse
@@ -49,7 +49,7 @@ async def get_locations(
 
 @router.get(
     "/devices/{device_id}/location/latest",
-    response_model=LocationLatestResponse,
+    response_model=LocationLatestResponse | None,
     summary="Get latest location",
 )
 async def get_latest_location(
@@ -59,10 +59,4 @@ async def get_latest_location(
 ):
     """Parent endpoint: get the latest known location."""
     await DeviceService.get_device(db, user, device_id)
-    loc = await LocationSyncService.get_latest(db, device_id)
-    if loc is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No location data available",
-        )
-    return loc
+    return await LocationSyncService.get_latest(db, device_id)
