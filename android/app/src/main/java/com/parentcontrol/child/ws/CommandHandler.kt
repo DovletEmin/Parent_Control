@@ -5,6 +5,8 @@ import android.content.Intent
 import android.util.Log
 import com.parentcontrol.child.data.model.WsMessage
 import com.parentcontrol.child.service.CameraStreamService
+import com.parentcontrol.child.service.ScreenStreamService
+import com.parentcontrol.child.ui.ScreenCaptureActivity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 
@@ -28,6 +30,8 @@ class CommandHandler(private val context: Context) {
             "command" -> handleCommand(msg)
             "webrtc_offer" -> handleWebRtcOffer(msg)
             "webrtc_ice" -> handleWebRtcIce(msg)
+            "screen_offer" -> handleScreenOffer(msg)
+            "screen_ice" -> handleScreenIce(msg)
         }
     }
 
@@ -50,6 +54,16 @@ class CommandHandler(private val context: Context) {
                         ackCommand(commandId, "failed")
                     } else {
                         startCameraStream(pid)
+                        ackCommand(commandId, "executed")
+                    }
+                }
+                "request_screen" -> {
+                    val pid = msg.parentId
+                    if (pid.isNullOrBlank()) {
+                        Log.w(TAG, "request_screen without parent_id")
+                        ackCommand(commandId, "failed")
+                    } else {
+                        startScreenCapture(pid)
                         ackCommand(commandId, "executed")
                     }
                 }
@@ -157,6 +171,32 @@ class CommandHandler(private val context: Context) {
 
     private fun handleWebRtcIce(msg: WsMessage) {
         val intent = Intent(CameraStreamService.ACTION_WEBRTC_ICE).apply {
+            putExtra("candidate", msg.candidate)
+            putExtra("parent_id", msg.parentId)
+            setPackage(context.packageName)
+        }
+        context.sendBroadcast(intent)
+    }
+
+    private fun startScreenCapture(parentId: String) {
+        val intent = Intent(context, ScreenCaptureActivity::class.java).apply {
+            putExtra(ScreenCaptureActivity.EXTRA_PARENT_ID, parentId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
+    private fun handleScreenOffer(msg: WsMessage) {
+        val intent = Intent(ScreenStreamService.ACTION_SCREEN_OFFER).apply {
+            putExtra("sdp", msg.sdp)
+            putExtra("parent_id", msg.parentId)
+            setPackage(context.packageName)
+        }
+        context.sendBroadcast(intent)
+    }
+
+    private fun handleScreenIce(msg: WsMessage) {
+        val intent = Intent(ScreenStreamService.ACTION_SCREEN_ICE).apply {
             putExtra("candidate", msg.candidate)
             putExtra("parent_id", msg.parentId)
             setPackage(context.packageName)

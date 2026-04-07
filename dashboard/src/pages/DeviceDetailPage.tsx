@@ -11,6 +11,7 @@ const tabs = [
   { to: 'media', label: 'Медиа', icon: '🖼' },
   { to: 'location', label: 'Локация', icon: '📍' },
   { to: 'camera', label: 'Камера', icon: '📷' },
+  { to: 'screen', label: 'Экран', icon: '🖥' },
 ];
 
 const quickCommands: { type: CommandType; label: string; icon: string }[] = [

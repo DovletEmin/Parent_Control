@@ -14,5 +14,7 @@
     <string name="notification_monitoring">Родительский контроль активен</string>
     <string name="notification_camera_channel">Камера</string>
     <string name="notification_camera_active">Камера используется</string>
+    <string name="notification_screen_channel">Экран</string>
+    <string name="notification_screen_active">Трансляция экрана</string>
     <string name="admin_description">Родительский контроль использует права администратора для защиты от удаления.</string>
 </resources>

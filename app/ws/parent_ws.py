@@ -142,6 +142,55 @@ async def parent_ws_handler(websocket: WebSocket, access_token: str) -> None:
                             },
                         )
 
+            elif msg_type == "screen_offer":
+                device_id_str = data.get("device_id")
+                if device_id_str:
+                    try:
+                        device_id = uuid.UUID(device_id_str)
+                    except ValueError:
+                        continue
+                    if device_id in device_ids:
+                        await ws_manager.send_to_device(
+                            device_id,
+                            {
+                                "type": "screen_offer",
+                                "parent_id": str(user.id),
+                                "sdp": data.get("sdp"),
+                            },
+                        )
+
+            elif msg_type == "screen_ice":
+                device_id_str = data.get("device_id")
+                if device_id_str:
+                    try:
+                        device_id = uuid.UUID(device_id_str)
+                    except ValueError:
+                        continue
+                    if device_id in device_ids:
+                        await ws_manager.send_to_device(
+                            device_id,
+                            {
+                                "type": "screen_ice",
+                                "parent_id": str(user.id),
+                                "candidate": data.get("candidate"),
+                            },
+                        )
+
+            elif msg_type == "screen_stop":
+                device_id_str = data.get("device_id")
+                if device_id_str:
+                    try:
+                        device_id = uuid.UUID(device_id_str)
+                    except ValueError:
+                        continue
+                    if device_id in device_ids:
+                        await ws_manager.send_to_device(
+                            device_id,
+                            {
+                                "type": "screen_stop",
+                            },
+                        )
+
     except WebSocketDisconnect:
         pass
     except Exception as e:

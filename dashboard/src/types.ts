@@ -149,6 +149,7 @@ export interface LocationLatestResponse {
 export type CommandType =
   | 'request_location'
   | 'request_camera'
+  | 'request_screen'
   | 'play_sound'
   | 'sync_now'
   | 'lock_device'

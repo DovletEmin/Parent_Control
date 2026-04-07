@@ -40,8 +40,8 @@ class CommandService:
             "command_type": command.command_type,
             "payload": command.payload,
         }
-        # Camera commands need parent_id so the device knows who to stream to
-        if data.command_type == "request_camera":
+        # Camera/screen commands need parent_id so the device knows who to stream to
+        if data.command_type in ("request_camera", "request_screen"):
             ws_payload["parent_id"] = str(user.id)
 
         delivered = await ws_manager.send_to_device(device_id, ws_payload)

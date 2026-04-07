@@ -13,6 +13,7 @@ class CommandType(StrEnum):
     BLOCK_APP = "block_app"
     UNBLOCK_APP = "unblock_app"
     REQUEST_CAMERA = "request_camera"
+    REQUEST_SCREEN = "request_screen"
     REQUEST_LOCATION = "request_location"
     PLAY_SOUND = "play_sound"
     LOCK_DEVICE = "lock_device"

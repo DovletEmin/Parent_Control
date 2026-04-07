@@ -15,6 +15,7 @@ import MessagesTab from './pages/tabs/MessagesTab';
 import MediaTab from './pages/tabs/MediaTab';
 import LocationTab from './pages/tabs/LocationTab';
 import CameraTab from './pages/tabs/CameraTab';
+import ScreenTab from './pages/tabs/ScreenTab';
 
 export default function App() {
   const loadUser = useAuthStore((s) => s.loadUser);
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="media" element={<MediaTab />} />
             <Route path="location" element={<LocationTab />} />
             <Route path="camera" element={<CameraTab />} />
+            <Route path="screen" element={<ScreenTab />} />
           </Route>
         </Route>
       </Route>

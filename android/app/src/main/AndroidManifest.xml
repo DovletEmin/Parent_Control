@@ -36,6 +36,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -72,6 +73,12 @@
             android:name=".ui.StatusActivity"
             android:exported="false" />
 
+        <!-- Screen Capture Activity (transparent, requests MediaProjection) -->
+        <activity
+            android:name=".ui.ScreenCaptureActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Foreground Monitoring Service -->
         <service
             android:name=".service.MonitoringService"
@@ -82,6 +89,12 @@
         <service
             android:name=".service.CameraStreamService"
             android:foregroundServiceType="camera"
+            android:exported="false" />
+
+        <!-- Screen Streaming Service -->
+        <service
+            android:name=".service.ScreenStreamService"
+            android:foregroundServiceType="mediaProjection"
             android:exported="false" />
 
         <!-- Social Media Notification Listener -->

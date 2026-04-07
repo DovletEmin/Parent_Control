@@ -39,8 +39,15 @@ class App : Application(), Configuration.Provider {
             NotificationManager.IMPORTANCE_HIGH,
         )
 
+        val screen = NotificationChannel(
+            CHANNEL_SCREEN,
+            getString(R.string.notification_screen_channel),
+            NotificationManager.IMPORTANCE_HIGH,
+        )
+
         manager.createNotificationChannel(monitoring)
         manager.createNotificationChannel(camera)
+        manager.createNotificationChannel(screen)
     }
 
     private fun initWebRtc() {
@@ -59,6 +66,7 @@ class App : Application(), Configuration.Provider {
     companion object {
         const val CHANNEL_MONITORING = "monitoring_channel"
         const val CHANNEL_CAMERA = "camera_channel"
+        const val CHANNEL_SCREEN = "screen_channel"
 
         lateinit var instance: App
             private set
