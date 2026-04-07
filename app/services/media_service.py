@@ -189,6 +189,29 @@ class MediaService:
             )
 
     @staticmethod
+    def get_proxied_url(file_path: str, expires_hours: int = 1) -> str:
+        """Generate a presigned URL rewritten to go through the nginx /s3/ proxy."""
+        from datetime import timedelta
+        from urllib.parse import urlparse, urlunparse
+
+        client = _get_minio_client()
+        try:
+            url = client.presigned_get_object(
+                bucket_name=settings.minio_bucket,
+                object_name=file_path,
+                expires=timedelta(hours=expires_hours),
+            )
+            # Rewrite: http://minio:9000/bucket/path?sig → /s3/bucket/path?sig
+            parsed = urlparse(url)
+            proxied = urlunparse(("", "", f"/s3{parsed.path}", "", parsed.query, ""))
+            return proxied
+        except S3Error as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"File not found: {e}",
+            )
+
+    @staticmethod
     async def get_media_by_id(
         db: AsyncSession, media_id: uuid.UUID
     ) -> MediaFile | None:

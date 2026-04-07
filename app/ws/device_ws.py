@@ -9,6 +9,7 @@ from sqlalchemy import select, update
 from app.database import async_session_factory
 from app.models.device import Device
 from app.models.command import DeviceCommand, CommandStatus
+from app.models.location import Location
 from app.ws.manager import ws_manager
 
 logger = logging.getLogger(__name__)
@@ -146,16 +147,42 @@ async def device_ws_handler(websocket: WebSocket, device_token: str) -> None:
                     )
 
             elif msg_type == "location":
+                lat = data.get("latitude")
+                lon = data.get("longitude")
+                recorded_at_str = data.get("recorded_at")
+
+                # Save to database
+                if lat is not None and lon is not None:
+                    try:
+                        recorded_at = (
+                            datetime.fromisoformat(recorded_at_str)
+                            if recorded_at_str
+                            else datetime.now(timezone.utc)
+                        )
+                        async with async_session_factory() as db:
+                            db.add(Location(
+                                device_id=device.id,
+                                latitude=lat,
+                                longitude=lon,
+                                accuracy=data.get("accuracy"),
+                                altitude=data.get("altitude"),
+                                speed=data.get("speed"),
+                                recorded_at=recorded_at,
+                            ))
+                            await db.commit()
+                    except Exception as e:
+                        logger.warning(f"Failed to save WS location: {e}")
+
                 # Forward real-time location to parent
                 await ws_manager.send_to_parent(
                     device.user_id,
                     {
                         "type": "device_location",
                         "device_id": str(device.id),
-                        "latitude": data.get("latitude"),
-                        "longitude": data.get("longitude"),
+                        "latitude": lat,
+                        "longitude": lon,
                         "accuracy": data.get("accuracy"),
-                        "recorded_at": data.get("recorded_at"),
+                        "recorded_at": recorded_at_str,
                     },
                 )
 

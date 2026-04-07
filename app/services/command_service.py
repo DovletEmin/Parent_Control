@@ -34,15 +34,17 @@ class CommandService:
         await db.flush()
 
         # Try to deliver via WebSocket immediately
-        delivered = await ws_manager.send_to_device(
-            device_id,
-            {
-                "type": "command",
-                "command_id": str(command.id),
-                "command_type": command.command_type,
-                "payload": command.payload,
-            },
-        )
+        ws_payload = {
+            "type": "command",
+            "command_id": str(command.id),
+            "command_type": command.command_type,
+            "payload": command.payload,
+        }
+        # Camera commands need parent_id so the device knows who to stream to
+        if data.command_type == "request_camera":
+            ws_payload["parent_id"] = str(user.id)
+
+        delivered = await ws_manager.send_to_device(device_id, ws_payload)
 
         if delivered:
             command.status = CommandStatus.SENT

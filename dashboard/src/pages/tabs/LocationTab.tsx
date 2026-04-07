@@ -1,18 +1,56 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { location as locationApi } from '../../api/client';
-import type { LocationResponse, LocationLatestResponse } from '../../types';
+import { location as locationApi, commands } from '../../api/client';
+import { useWsStore } from '../../store/wsStore';
+import type { LocationResponse, LocationLatestResponse, WsMessage, DeviceResponse } from '../../types';
 import L from 'leaflet';
 
-interface Ctx { deviceId: string }
+interface Ctx { deviceId: string; device: DeviceResponse }
 
 export default function LocationTab() {
-  const { deviceId } = useOutletContext<Ctx>();
+  const { deviceId, device } = useOutletContext<Ctx>();
   const [latest, setLatest] = useState<LocationLatestResponse | null>(null);
   const [history, setHistory] = useState<LocationResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requesting, setRequesting] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const circleRef = useRef<L.Circle | null>(null);
+  const onWs = useWsStore((s) => s.on);
+
+  // Listen for real-time location updates via WS
+  useEffect(() => {
+    const unsub = onWs('device_location', (msg: WsMessage) => {
+      if (msg.device_id !== deviceId) return;
+      if (msg.latitude != null && msg.longitude != null) {
+        const newLatest: LocationLatestResponse = {
+          latitude: msg.latitude,
+          longitude: msg.longitude,
+          accuracy: msg.accuracy ?? null,
+          altitude: null,
+          speed: null,
+          recorded_at: msg.recorded_at ?? new Date().toISOString(),
+        };
+        setLatest(newLatest);
+
+        // Update map marker in real-time
+        if (mapInstanceRef.current) {
+          const latlng: L.LatLngExpression = [msg.latitude, msg.longitude];
+          mapInstanceRef.current.setView(latlng, mapInstanceRef.current.getZoom());
+
+          if (markerRef.current) {
+            markerRef.current.setLatLng(latlng);
+          }
+          if (circleRef.current && msg.accuracy) {
+            circleRef.current.setLatLng(latlng);
+            circleRef.current.setRadius(msg.accuracy);
+          }
+        }
+      }
+    });
+    return unsub;
+  }, [deviceId, onWs]);
 
   useEffect(() => {
     Promise.all([
@@ -23,6 +61,14 @@ export default function LocationTab() {
       setHistory(hist as LocationResponse[]);
       setLoading(false);
     });
+  }, [deviceId]);
+
+  const requestLocation = useCallback(async () => {
+    setRequesting(true);
+    try {
+      await commands.send(deviceId, { command_type: 'request_location' });
+    } catch { /* ignore */ }
+    finally { setRequesting(false); }
   }, [deviceId]);
 
   useEffect(() => {
@@ -54,21 +100,23 @@ export default function LocationTab() {
         iconAnchor: [8, 8],
       });
 
-      L.marker([latest.latitude, latest.longitude], { icon })
+      const marker = L.marker([latest.latitude, latest.longitude], { icon })
         .addTo(map)
         .bindPopup(
           `<b>Текущая позиция</b><br/>
            ${latest.accuracy ? `±${Math.round(latest.accuracy)}м<br/>` : ''}
            ${new Date(latest.recorded_at).toLocaleString('ru')}`,
         );
+      markerRef.current = marker;
 
       if (latest.accuracy) {
-        L.circle([latest.latitude, latest.longitude], {
+        const circle = L.circle([latest.latitude, latest.longitude], {
           radius: latest.accuracy,
           color: '#3b82f6',
           fillOpacity: 0.1,
           weight: 1,
         }).addTo(map);
+        circleRef.current = circle;
       }
     }
 
@@ -88,7 +136,16 @@ export default function LocationTab() {
 
   return (
     <div className="rounded-xl border bg-white p-5">
-      <h3 className="mb-4 font-semibold">Геолокация</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="font-semibold">Геолокация</h3>
+        <button
+          onClick={requestLocation}
+          disabled={requesting || !device?.is_online}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          {requesting ? '⏳ Запрос…' : '📍 Запросить локацию'}
+        </button>
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-12">

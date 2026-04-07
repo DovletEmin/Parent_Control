@@ -5,26 +5,73 @@ import type { MessageResponse } from '../../types';
 
 interface Ctx { deviceId: string }
 
+const typeFilters = [
+  { value: '', label: 'Все' },
+  { value: 'sms', label: 'SMS' },
+  { value: 'notification', label: 'Соцсети' },
+];
+
+function msgIcon(msg: MessageResponse) {
+  if (msg.message_type === 'notification') {
+    const s = msg.sender.toLowerCase();
+    if (s.includes('telegram')) return '✈️';
+    if (s.includes('whatsapp')) return '💬';
+    if (s.includes('instagram')) return '📸';
+    if (s.includes('messenger')) return '💭';
+    if (s.includes('viber')) return '📱';
+    if (s.includes('discord')) return '🎮';
+    if (s.includes('vk') || s.includes('вк')) return '🔵';
+    if (s.includes('snapchat')) return '👻';
+    return '🔔';
+  }
+  return msg.is_incoming ? '📥' : '📤';
+}
+
+function msgBorderColor(msg: MessageResponse) {
+  if (msg.message_type === 'notification') return 'border-purple-400 bg-purple-50';
+  return msg.is_incoming ? 'border-blue-400 bg-gray-50' : 'border-green-400 bg-green-50';
+}
+
 export default function MessagesTab() {
   const { deviceId } = useOutletContext<Ctx>();
   const [items, setItems] = useState<MessageResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     setLoading(true);
     messages
-      .list(deviceId, { contact: search || undefined, page })
+      .list(deviceId, {
+        contact: search || undefined,
+        message_type: typeFilter || undefined,
+        page,
+      })
       .then(setItems)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [deviceId, search, page]);
+  }, [deviceId, search, typeFilter, page]);
 
   return (
     <div className="rounded-xl border bg-white p-5">
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <h3 className="font-semibold">Сообщения</h3>
+        <div className="flex gap-1 rounded-lg border p-0.5">
+          {typeFilters.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => { setTypeFilter(f.value); setPage(1); }}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                typeFilter === f.value
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
         <input
           type="text"
           placeholder="Поиск по контакту…"
@@ -39,22 +86,22 @@ export default function MessagesTab() {
           <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
         </div>
       ) : items.length === 0 ? (
-        <p className="py-8 text-center text-gray-400">Нет сообщений</p>
+        <p className="py-8 text-center text-gray-400">
+          {typeFilter === 'notification'
+            ? 'Нет сообщений из соцсетей. Убедитесь, что на устройстве включён доступ к уведомлениям.'
+            : 'Нет сообщений'}
+        </p>
       ) : (
         <>
           <div className="space-y-3">
             {items.map((msg) => (
               <div
                 key={msg.id}
-                className={`rounded-lg p-3 text-sm ${
-                  msg.is_incoming
-                    ? 'bg-gray-50 border-l-4 border-blue-400'
-                    : 'bg-green-50 border-l-4 border-green-400'
-                }`}
+                className={`rounded-lg p-3 text-sm border-l-4 ${msgBorderColor(msg)}`}
               >
                 <div className="mb-1 flex items-center justify-between">
                   <span className="font-medium">
-                    {msg.is_incoming ? `📥 ${msg.sender}` : `📤 → ${msg.receiver || '?'}`}
+                    {msgIcon(msg)} {msg.is_incoming ? msg.sender : `→ ${msg.receiver || '?'}`}
                   </span>
                   <span className="text-xs text-gray-400">
                     {new Date(msg.sent_at).toLocaleString('ru')}

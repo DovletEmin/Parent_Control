@@ -6,7 +6,7 @@ import android.util.Log
 import com.parentcontrol.child.data.model.WsMessage
 import com.parentcontrol.child.service.CameraStreamService
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collect
 
 class CommandHandler(private val context: Context) {
 
@@ -17,7 +17,7 @@ class CommandHandler(private val context: Context) {
 
     fun start() {
         scope.launch {
-            ws.messages.collectLatest { msg ->
+            ws.messages.collect { msg ->
                 handleMessage(msg)
             }
         }

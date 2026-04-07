@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse
 
 from app.core.dependencies import CurrentDevice, CurrentUser, CurrentUserOrToken, DBSession
 from app.schemas.media import MediaListResponse, MediaUploadResponse
@@ -55,7 +55,7 @@ async def download_media(
     user: CurrentUserOrToken,
     db: DBSession,
 ):
-    """Parent endpoint: get a media file (proxied through backend)."""
+    """Parent endpoint: redirect to media file via nginx proxy."""
     media = await MediaService.get_media_by_id(db, media_id)
     if media is None:
         raise HTTPException(
@@ -66,12 +66,8 @@ async def download_media(
     # Verify ownership through device
     await DeviceService.get_device(db, user, media.device_id)
 
-    data = MediaService.get_file_stream(media.file_path)
-    return Response(
-        content=data,
-        media_type=media.mime_type or "application/octet-stream",
-        headers={"Cache-Control": "private, max-age=3600"},
-    )
+    url = MediaService.get_proxied_url(media.file_path)
+    return RedirectResponse(url=url, status_code=302)
 
 
 @router.get(
@@ -83,7 +79,7 @@ async def get_thumbnail(
     user: CurrentUserOrToken,
     db: DBSession,
 ):
-    """Parent endpoint: get thumbnail for a media file (proxied through backend)."""
+    """Parent endpoint: redirect to thumbnail via nginx proxy."""
     media = await MediaService.get_media_by_id(db, media_id)
     if media is None:
         raise HTTPException(
@@ -94,12 +90,5 @@ async def get_thumbnail(
     await DeviceService.get_device(db, user, media.device_id)
 
     path = media.thumbnail_path or media.file_path
-    data = MediaService.get_file_stream(path)
-    content_type = media.mime_type or "application/octet-stream"
-    if media.thumbnail_path:
-        content_type = "image/jpeg"
-    return Response(
-        content=data,
-        media_type=content_type,
-        headers={"Cache-Control": "private, max-age=3600"},
-    )
+    url = MediaService.get_proxied_url(path)
+    return RedirectResponse(url=url, status_code=302)
