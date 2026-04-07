@@ -170,6 +170,25 @@ class MediaService:
             )
 
     @staticmethod
+    def get_file_stream(file_path: str):
+        """Get file data from MinIO as bytes + content type."""
+        client = _get_minio_client()
+        try:
+            response = client.get_object(
+                bucket_name=settings.minio_bucket,
+                object_name=file_path,
+            )
+            data = response.read()
+            response.close()
+            response.release_conn()
+            return data
+        except S3Error as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"File not found: {e}",
+            )
+
+    @staticmethod
     async def get_media_by_id(
         db: AsyncSession, media_id: uuid.UUID
     ) -> MediaFile | None:

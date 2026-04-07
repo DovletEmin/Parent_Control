@@ -38,12 +38,27 @@ class ConnectionManager:
         ws = self.device_connections.get(device_id)
         if ws is None:
             return False
-        await ws.send_json(data)
-        return True
+        try:
+            await ws.send_json(data)
+            return True
+        except Exception:
+            # Connection is stale, remove it
+            self.device_connections.pop(device_id, None)
+            return False
 
     async def send_to_parent(self, user_id: uuid.UUID, data: dict) -> None:
+        stale = []
         for ws in self.parent_connections.get(user_id, []):
-            await ws.send_json(data)
+            try:
+                await ws.send_json(data)
+            except Exception:
+                stale.append(ws)
+        for ws in stale:
+            self.parent_connections.get(user_id, [])
+            if user_id in self.parent_connections:
+                self.parent_connections[user_id] = [
+                    c for c in self.parent_connections[user_id] if c is not ws
+                ]
 
     def is_device_connected(self, device_id: uuid.UUID) -> bool:
         return device_id in self.device_connections
