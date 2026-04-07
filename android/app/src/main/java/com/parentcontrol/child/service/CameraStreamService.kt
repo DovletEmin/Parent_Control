@@ -61,6 +61,11 @@ class CameraStreamService : Service() {
         initWebRtc()
         registerReceivers()
 
+        // Notify parent we're ready for WebRTC signaling
+        DeviceWebSocket.instance.send(
+            WsMessage(type = "camera_ready", parentId = parentId)
+        )
+
         return START_NOT_STICKY
     }
 

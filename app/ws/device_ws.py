@@ -186,8 +186,8 @@ async def device_ws_handler(websocket: WebSocket, device_token: str) -> None:
                     },
                 )
 
-            elif msg_type in ("webrtc_answer", "webrtc_ice"):
-                # Forward WebRTC signaling to parent
+            elif msg_type in ("webrtc_answer", "webrtc_ice", "camera_ready", "screen_answer", "screen_ice", "screen_ready"):
+                # Forward WebRTC signaling / camera_ready to parent
                 parent_id = data.get("parent_id")
                 if parent_id:
                     try:

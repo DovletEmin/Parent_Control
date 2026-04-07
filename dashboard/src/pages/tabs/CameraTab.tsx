@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useWsStore } from '../../store/wsStore';
 import { commands } from '../../api/client';
@@ -14,15 +14,80 @@ export default function CameraTab() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const send = useWsStore((s) => s.send);
   const wsConnected = useWsStore((s) => s.connected);
   const onWs = useWsStore((s) => s.on);
 
+  const createPeer = useCallback(() => {
+    if (peerRef.current) return; // already created
+
+    const peer = new Peer({
+      initiator: true,
+      trickle: true,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ],
+      },
+    });
+
+    peer.on('signal', (data) => {
+      if (data.type === 'offer') {
+        setStatus('Отправка предложения…');
+        send({
+          type: 'webrtc_offer',
+          device_id: deviceId,
+          sdp: data.sdp,
+        });
+      } else if (data.type === 'candidate' && data.candidate) {
+        const c = data.candidate;
+        send({
+          type: 'webrtc_ice',
+          device_id: deviceId,
+          candidate: `${c.sdpMid}|${c.sdpMLineIndex}|${c.candidate}`,
+        });
+      }
+    });
+
+    peer.on('stream', (stream) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setStreaming(true);
+      setConnecting(false);
+      setStatus('');
+    });
+
+    peer.on('close', () => {
+      setStreaming(false);
+      setConnecting(false);
+    });
+
+    peer.on('error', (err) => {
+      setError(`Ошибка WebRTC: ${err.message}`);
+      setStreaming(false);
+      setConnecting(false);
+    });
+
+    peerRef.current = peer;
+  }, [deviceId, send]);
+
   useEffect(() => {
+    // Device finished camera init → now create the WebRTC peer
+    const unsubReady = onWs('camera_ready', (msg: WsMessage) => {
+      if (msg.device_id !== deviceId) return;
+      setStatus('Устройство готово, установка соединения…');
+      createPeer();
+    });
+
     const unsubAnswer = onWs('webrtc_answer', (msg: WsMessage) => {
       if (msg.device_id !== deviceId) return;
       if (peerRef.current && msg.sdp) {
+        setStatus('Получен ответ, подключение…');
         peerRef.current.signal({ type: 'answer', sdp: msg.sdp });
       }
     });
@@ -45,12 +110,22 @@ export default function CameraTab() {
     });
 
     return () => {
+      unsubReady();
       unsubAnswer();
       unsubIce();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      stopStream();
     };
-  }, [deviceId, onWs, send]);
+  }, [deviceId, onWs, createPeer]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (peerRef.current) {
+        peerRef.current.destroy();
+        peerRef.current = null;
+      }
+    };
+  }, []);
 
   const startStream = async () => {
     setError('');
@@ -66,68 +141,22 @@ export default function CameraTab() {
     }
 
     setConnecting(true);
+    setStatus('Отправка команды…');
 
-    // Timeout — if no stream in 15 seconds, abort
+    // 20s timeout
     timeoutRef.current = setTimeout(() => {
-      if (!peerRef.current?.connected) {
-        setError('Устройство не ответило. Убедитесь, что приложение запущено на устройстве.');
+      if (!streaming) {
+        setError('Устройство не ответило. Убедитесь, что приложение запущено.');
         stopStream();
       }
-    }, 15_000);
+    }, 20_000);
 
     try {
-      // Send command to device to start camera
+      // Send command → device starts camera → sends "camera_ready" → we create peer
       await commands.send(deviceId, { command_type: 'request_camera' });
-
-      // Create WebRTC peer (initiator)
-      const peer = new Peer({
-        initiator: true,
-        trickle: true,
-        config: {
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-        },
-      });
-
-      peer.on('signal', (data) => {
-        if (data.type === 'offer') {
-          send({
-            type: 'webrtc_offer',
-            device_id: deviceId,
-            sdp: data.sdp,
-          });
-        } else if (data.type === 'candidate' && data.candidate) {
-          const c = data.candidate;
-          send({
-            type: 'webrtc_ice',
-            device_id: deviceId,
-            candidate: `${c.sdpMid}|${c.sdpMLineIndex}|${c.candidate}`,
-          });
-        }
-      });
-
-      peer.on('stream', (stream) => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setStreaming(true);
-        setConnecting(false);
-      });
-
-      peer.on('close', () => {
-        setStreaming(false);
-        setConnecting(false);
-      });
-
-      peer.on('error', (err) => {
-        setError(`Ошибка WebRTC: ${err.message}`);
-        setStreaming(false);
-        setConnecting(false);
-      });
-
-      peerRef.current = peer;
+      setStatus('Ожидание готовности устройства…');
     } catch {
-      setError('Не удалось запросить камеру');
+      setError('Не удалось отправить команду');
       setConnecting(false);
     }
   };
@@ -147,6 +176,7 @@ export default function CameraTab() {
     send({ type: 'webrtc_stop', device_id: deviceId });
     setStreaming(false);
     setConnecting(false);
+    setStatus('');
   };
 
   return (
@@ -172,6 +202,7 @@ export default function CameraTab() {
       </div>
 
       {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+      {connecting && status && <p className="mb-4 text-sm text-blue-600">{status}</p>}
 
       <div className="relative aspect-video overflow-hidden rounded-lg bg-gray-900">
         <video
@@ -187,7 +218,7 @@ export default function CameraTab() {
           </div>
         )}
         {connecting && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
           </div>
         )}
