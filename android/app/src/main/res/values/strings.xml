@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Родительский контроль</string>
+    <string name="pairing_title">Привязка устройства</string>
+    <string name="pairing_hint">Введите 6-значный код</string>
+    <string name="pairing_button">Привязать</string>
+    <string name="pairing_error">Неверный код привязки</string>
+    <string name="status_title">Мониторинг активен</string>
+    <string name="status_connected">Подключено к серверу</string>
+    <string name="status_disconnected">Отключено от сервера</string>
+    <string name="status_syncing">Синхронизация…</string>
+    <string name="notification_channel_name">Мониторинг</string>
+    <string name="notification_channel_desc">Уведомление о работе мониторинга</string>
+    <string name="notification_monitoring">Родительский контроль активен</string>
+    <string name="notification_camera_channel">Камера</string>
+    <string name="notification_camera_active">Камера используется</string>
+    <string name="admin_description">Родительский контроль использует права администратора для защиты от удаления.</string>
+</resources>
