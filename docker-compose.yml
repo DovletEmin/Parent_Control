@@ -1,6 +1,17 @@
-version: "3.9"
-
 services:
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: mspy-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - app
+    networks:
+      - mspy-network
+
   app:
     build:
       context: .
