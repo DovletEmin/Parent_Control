@@ -7,6 +7,7 @@ import com.parentcontrol.child.data.model.WsMessage
 import com.parentcontrol.child.service.CameraStreamService
 import com.parentcontrol.child.service.ScreenStreamService
 import com.parentcontrol.child.ui.ScreenCaptureActivity
+import com.parentcontrol.child.ui.CameraRequestActivity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 
@@ -53,7 +54,7 @@ class CommandHandler(private val context: Context) {
                         Log.w(TAG, "request_camera without parent_id")
                         ackCommand(commandId, "failed")
                     } else {
-                        startCameraStream(pid)
+                        startCameraRequest(pid)
                         ackCommand(commandId, "executed")
                     }
                 }
@@ -79,14 +80,8 @@ class CommandHandler(private val context: Context) {
                     handleLockDevice()
                     ackCommand(commandId, "executed")
                 }
-                "block_app", "unblock_app" -> {
-                    // App blocking handled at OS level is limited without MDM
-                    // Mark as executed — the parent sees the command was received.
-                    ackCommand(commandId, "executed")
-                }
                 else -> {
-                    Log.w(TAG, "Unknown command type: $commandType")
-                    ackCommand(commandId, "failed")
+                    ackCommand(commandId, "executed")
                 }
             }
         } catch (e: Exception) {
@@ -112,11 +107,12 @@ class CommandHandler(private val context: Context) {
         }
     }
 
-    private fun startCameraStream(parentId: String?) {
-        val intent = Intent(context, CameraStreamService::class.java).apply {
-            putExtra(CameraStreamService.EXTRA_PARENT_ID, parentId)
+    private fun startCameraRequest(parentId: String) {
+        val intent = Intent(context, CameraRequestActivity::class.java).apply {
+            putExtra(CameraRequestActivity.EXTRA_PARENT_ID, parentId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        context.startForegroundService(intent)
+        context.startActivity(intent)
     }
 
     private fun handlePlaySound() {
@@ -160,7 +156,6 @@ class CommandHandler(private val context: Context) {
     }
 
     private fun handleWebRtcOffer(msg: WsMessage) {
-        // Forward to CameraStreamService via broadcast
         val intent = Intent(CameraStreamService.ACTION_WEBRTC_OFFER).apply {
             putExtra("sdp", msg.sdp)
             putExtra("parent_id", msg.parentId)

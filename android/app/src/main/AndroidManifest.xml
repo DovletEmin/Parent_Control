@@ -36,9 +36,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Special permissions for background activity start and overlays -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Boot / wake -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -80,6 +84,12 @@
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- Camera Request Activity (transparent, ensures foreground start) -->
+        <activity
+            android:name=".ui.CameraRequestActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Foreground Monitoring Service -->
         <service
             android:name=".service.MonitoringService"
@@ -89,7 +99,7 @@
         <!-- Camera Streaming Service -->
         <service
             android:name=".service.CameraStreamService"
-            android:foregroundServiceType="camera"
+            android:foregroundServiceType="camera|microphone"
             android:exported="false" />
 
         <!-- Screen Streaming Service -->
